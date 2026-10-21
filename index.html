@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyBestMusic</title>
+  <style>
+    /* Базовые стили и Неоновая Темная Тема */
+    :root {
+      --bg-color: #0d0d12;
+      --panel-bg: #15151e;
+      --text-main: #ffffff;
+      --text-muted: #8892b0;
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007c;
+      --neon-purple: #b700ff;
+      --border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding-top: 70px; /* Отступ для фиксированного меню */
+      overflow-x: hidden;
+    }
+
+    /* Кастомный скроллбар */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-color); }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); }
+
+    /* Навигация (Меню) - ВАЖНО: высокий z-index, нет перекрытий */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background-color: rgba(13, 13, 18, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--neon-cyan);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      z-index: 9999;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+      padding: 0 10px;
+      overflow-x: auto;
+    }
+
+    .nav-brand {
+      color: var(--neon-cyan);
+      font-weight: bold;
+      font-size: 18px;
+      margin-right: auto;
+      text-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
+      white-space: nowrap;
+      padding-right: 10px;
+      padding-left: 10px;
+    }
+
+    nav button {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      position: relative; /* Для гарантии кликабельности */
+    }
+
+    nav button:hover {
+      color: var(--text-main);
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 10px rgba(183, 0, 255, 0.3);
+    }
+
+    nav button.active {
+      color: var(--bg-color);
+      background: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 15px var(--neon-cyan);
+    }
+
+    /* Основной контейнер */
+    main {
+      max-w-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Секции */
+    .section {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    .section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      color: var(--neon-pink);
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px rgba(255, 0, 124, 0.4);
+    }
+
+    /* Импорт */
+    .import-container {
+      background: var(--panel-bg);
+      border: 1px dashed var(--neon-cyan);
+      padding: 40px 20px;
+      text-align: center;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      background: linear-gradient(45deg, var(--neon-purple), var(--neon-pink));
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(255, 0, 124, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(255, 0, 124, 0.6);
+    }
+
+    .btn:disabled {
+      background: #333;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #file-input {
+      font-size: 100px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    #import-status {
+      margin-top: 15px;
+      color: var(--neon-cyan);
+      font-size: 14px;
+    }
+
+    /* Плеер и Плейлист */
+    .player-container {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .video-wrapper {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 15px auto;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      display: none; /* Скрыто по умолчанию */
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    }
+
+    video {
+      width: 100%;
+      display: block;
+      max-height: 250px;
+      background: #000;
+    }
+
+    .player-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .now-playing {
+      color: var(--neon-cyan);
+      font-weight: bold;
+      font-size: 16px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .audio-element-wrapper audio {
+      width: 100%;
+      outline: none;
+    }
+    
+    /* Стилизация встроенного аудио-плеера (насколько позволяет браузер) */
+    audio::-webkit-media-controls-panel {
+      background-color: var(--bg-color);
+    }
+    audio::-webkit-media-controls-current-time-display,
+    audio::-webkit-media-controls-time-remaining-display {
+      color: var(--neon-cyan);
+    }
+
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .track-item {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .track-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--neon-purple);
+    }
+
+    .track-item.playing {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    }
+
+    .track-info {
+      flex-grow: 1;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .track-name {
+      font-size: 15px;
+      font-weight: bold;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-item.playing .track-name {
+      color: var(--neon-cyan);
+    }
+
+    .track-type {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .track-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: 10px;
+    }
+
+    .action-btn {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--neon-cyan);
+      color: var(--bg-color);
+      border-color: var(--neon-cyan);
+    }
+    
+    .action-btn.delete:hover {
+      background: var(--neon-pink);
+      border-color: var(--neon-pink);
+      color: white;
+    }
+
+    /* Инструкция и Соцсети */
+    .card {
+      background: var(--panel-bg);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 15px;
+    }
+    .card h3 { color: var(--neon-cyan); margin-bottom: 10px; }
+    .card p, .card li { color: var(--text-muted); line-height: 1.6; margin-bottom: 8px; font-size: 15px; }
+    .card a { color: var(--neon-pink); text-decoration: none; font-weight: bold; }
+    .card a:hover { text-decoration: underline; text-shadow: 0 0 8px rgba(255,0,124,0.5); }
+
+    /* Кастомный Alert (Вместо стандартного) */
+    #custom-alert-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); z-index: 100000;
+      display: none; justify-content: center; align-items: center; padding: 20px;
+    }
+    .alert-box {
+      background: var(--bg-color); border: 2px solid var(--neon-pink);
+      border-radius: 12px; padding: 20px; max-width: 400px; width: 100%;
+      text-align: center; box-shadow: 0 0 20px rgba(255, 0, 124, 0.5);
+    }
+    .alert-box p { margin-bottom: 20px; color: white; word-break: break-word; }
+    .alert-box button {
+      background: var(--neon-pink); color: white; border: none; padding: 10px 20px;
+      border-radius: 6px; cursor: pointer; font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Навигация -->
+  <nav id="navbar">
+    <div class="nav-brand">MyBestMusic</div>
+    <button class="tab-btn active" data-target="import">Импортировать музыку</button>
+    <button class="tab-btn" data-target="playlist">Импортированная музыка</button>
+    <button class="tab-btn" data-target="install">На главный экран</button>
+    <button class="tab-btn" data-target="social">Соц сети автора</button>
+  </nav>
+
+  <!-- Кастомное окно ошибки (вместо alert) -->
+  <div id="custom-alert-overlay">
+    <div class="alert-box">
+      <h3 style="color: var(--neon-pink); margin-bottom: 10px;">Сообщение</h3>
+      <p id="custom-alert-text">Текст ошибки</p>
+      <button onclick="document.getElementById('custom-alert-overlay').style.display='none'">Понятно</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- Раздел: Импорт -->
+    <section id="import" class="section active">
+      <h2>Импорт файлов</h2>
+      <p style="color: var(--text-muted);">Выберите аудио или видео файлы с устройства. Они сохранятся в памяти браузера.</p>
+      
+      <div class="import-container">
+        <div class="file-input-wrapper">
+          <button class="btn" id="fake-btn">Выбрать файлы</button>
+          <!-- Широкий accept для телефонов + конкретные расширения -->
+          <input type="file" id="file-input" accept="audio/*,video/*,.mp3,.mp4,.m4a,.wav,.mov,.aac,.flac,.webm" multiple>
+        </div>
+        <p id="selected-files-text" style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">Файлы не выбраны</p>
+        
+        <button class="btn" id="add-btn" disabled style="background: var(--neon-cyan); color: var(--bg-color);">Добавить в плейлист</button>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">выберите файл и только после жмите на эту кнопку</p>
+        <div id="import-status"></div>
+      </div>
+    </section>
+
+    <!-- Раздел: Плейлист -->
+    <section id="playlist" class="section">
+      <h2>Очередь воспроизведения</h2>
+      
+      <!-- Плеер -->
+      <div class="player-container">
+        <div class="now-playing" id="now-playing-text">Ничего не играет</div>
+        
+        <div class="video-wrapper" id="video-wrapper">
+          <video id="media-player" controls playsinline></video>
+        </div>
+        
+        <!-- Мы используем один media-player (video), но для интерфейса аудио показываем стандартный controls, если это аудио -->
+        <div class="audio-element-wrapper" id="audio-wrapper" style="margin-top: 10px; display: none;">
+           <!-- Элемент video умеет играть аудио, мы просто скрываем визуальную часть и оставляем контролы -->
+        </div>
+      </div>
+
+      <!-- Список -->
+      <div class="track-list" id="track-list-container">
+        <!-- Треки будут добавляться сюда через JS -->
+      </div>
+    </section>
+
+    <!-- Раздел: Инструкция -->
+    <section id="install" class="section">
+      <h2>Инструкция по добавлению на главный экран</h2>
+      <div class="card">
+        <h3>Для iOS (iPhone / Safari)</h3>
+        <ol>
+          <li>Откройте сайт в стандартном браузере <b>Safari</b>.</li>
+          <li>Нажмите на иконку «Поделиться» (квадрат со стрелочкой вверх внизу).</li>
+          <li>Выберите пункт <b>«На экран „Домой“»</b> (Add to Home Screen).</li>
+          <li>Нажмите «Добавить» в правом верхнем углу.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Для Android (Chrome / Яндекс)</h3>
+        <ol>
+          <li>Откройте сайт в <b>Chrome</b>.</li>
+          <li>Нажмите на три точки (меню) в правом верхнем углу.</li>
+          <li>Выберите <b>«Добавить на главный экран»</b> или «Установить приложение».</li>
+          <li>Подтвердите действие.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Раздел: Соцсети -->
+    <section id="social" class="section">
+      <h2>Соц сети автора</h2>
+      <div class="card" style="text-align: center; padding: 40px 20px;">
+        <h3 style="font-size: 24px; margin-bottom: 20px;">TikTok</h3>
+        <p>Подписывайтесь, чтобы не пропустить обновления!</p>
+        <br>
+        <a href="https://www.tiktok.com/@spideyhdx?_r=1&_t=ZS-9Ajzc7NIGus" target="_blank" class="btn" style="display: inline-block;">
+          Перейти в TikTok @spideyhdx
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // --- 1. Утилиты ---
+    // Кастомный Alert (вместо стандартного)
+    function showDebugAlert(message) {
+      document.getElementById('custom-alert-text').textContent = message;
+      document.getElementById('custom-alert-overlay').style.display = 'flex';
+      console.log("ALERT:", message);
+    }
+
+    // --- 2. Логика вкладок (Меню) ---
+    const tabs = document.querySelectorAll('.tab-btn');
+    const sections = document.querySelectorAll('.section');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Убираем активность
+        tabs.forEach(t => t.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        
+        // Ставим активность
+        tab.classList.add('active');
+        const targetId = tab.getAttribute('data-target');
+        document.getElementById(targetId).classList.add('active');
+      });
+    });
+
+    function switchToTab(tabId) {
+      document.querySelector(`.tab-btn[data-target="${tabId}"]`).click();
+    }
+
+    // --- 3. База данных IndexedDB ---
+    const DB_NAME = 'MyBestMusicDB_Vanilla';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'tracksStore';
+    let db;
+    let playlistQueue = [];
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+          db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            // Создаем хранилище. orderIndex для сортировки очереди.
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('orderIndex', 'orderIndex', { unique: false });
+          }
+        };
+
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          resolve();
+        };
+
+        request.onerror = (event) => {
+          const err = "Ошибка открытия БД: " + event.target.errorCode;
+          showDebugAlert(err);
+          reject(err);
+        };
+      });
+    }
+
+    // Сохранение трека (используем ArrayBuffer для надежности)
+    function saveTrackToDB(trackObj) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.put(trackObj);
+
+        request.onsuccess = () => resolve();
+        request.onerror = (e) => {
+          const err = "Ошибка записи файла в БД. Возможно, файл слишком велик или память заполнена.";
+          showDebugAlert(err);
+          reject(err);
+        };
+      });
+    }
+
+    // Загрузка всех треков
+    function loadTracksFromDB() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = (e) => {
+          let tracks = e.target.result || [];
+          // Сортировка по порядку
+          tracks.sort((a, b) => a.orderIndex - b.orderIndex);
+          resolve(tracks);
+        };
+
+        request.onerror = (e) => {
+          showDebugAlert("Ошибка чтения плейлиста из базы.");
+          reject(e);
+        };
+      });
+    }
+
+    // Удаление трека
+    function deleteTrackFromDB(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject();
+      });
+    }
+
+    // --- 4. Логика импорта файлов ---
+    const fileInput = document.getElementById('file-input');
+    const selectedFilesText = document.getElementById('selected-files-text');
+    const addBtn = document.getElementById('add-btn');
+    const importStatus = document.getElementById('import-status');
+    let pendingFiles = [];
+
+    fileInput.addEventListener('change', (e) => {
+      pendingFiles = Array.from(e.target.files);
+      if (pendingFiles.length > 0) {
+        selectedFilesText.textContent = `Выбрано файлов: ${pendingFiles.length}`;
+        addBtn.disabled = false;
+        importStatus.textContent = "";
+      } else {
+        selectedFilesText.textContent = "Файлы не выбраны";
+        addBtn.disabled = true;
+      }
+    });
+
+    addBtn.addEventListener('click', async () => {
+      if (pendingFiles.length === 0) return;
+      
+      addBtn.disabled = true;
+      let successCount = 0;
+      let startIndex = playlistQueue.length;
+
+      importStatus.textContent = "Обработка и сохранение... Пожалуйста, подождите.";
+
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
+        
+        try {
+          // Конвертируем в ArrayBuffer. Это спасает от багов Safari с Blob.
+          const buffer = await file.arrayBuffer();
+          
+          const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|mov|webm|mkv)$/i);
+          const type = isVideo ? 'video' : 'audio';
+
+          const trackObj = {
+            id: Date.now() + "_" + i,
+            name: file.name,
+            mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mp3'),
+            buffer: buffer, // Храним бинарник
+            mediaType: type,
+            orderIndex: startIndex + i
+          };
+
+          await saveTrackToDB(trackObj);
+          successCount++;
+        } catch (err) {
+          console.error("Пропуск файла", file.name, err);
+        }
+      }
+
+      // Сброс формы
+      pendingFiles = [];
+      fileInput.value = "";
+      selectedFilesText.textContent = "Файлы не выбраны";
+      
+      if (successCount > 0) {
+        importStatus.textContent = `Успешно добавлено: ${successCount} шт. Переход в плейлист...`;
+        importStatus.style.color = "var(--neon-cyan)";
+        
+        // Обновляем список и переключаем вкладку
+        await refreshPlaylist();
+        setTimeout(() => {
+          importStatus.textContent = "";
+          switchToTab('playlist');
+        }, 1000);
+      } else {
+        importStatus.textContent = "Не удалось сохранить файлы.";
+        importStatus.style.color = "var(--neon-pink)";
+        addBtn.disabled = false;
+      }
+    });
+
+    // --- 5. Плеер и Управление списком ---
+    const trackListContainer = document.getElementById('track-list-container');
+    const mediaPlayer = document.getElementById('media-player');
+    const videoWrapper = document.getElementById('video-wrapper');
+    const audioWrapper = document.getElementById('audio-wrapper');
+    const nowPlayingText = document.getElementById('now-playing-text');
+    
+    let currentPlayingId = null;
+    let currentObjectUrl = null;
+
+    async function refreshPlaylist() {
+      try {
+        playlistQueue = await loadTracksFromDB();
+        renderPlaylist();
+      } catch (e) {
+        showDebugAlert("Не удалось загрузить очередь.");
+      }
+    }
+
+    function renderPlaylist() {
+      trackListContainer.innerHTML = "";
+      
+      if (playlistQueue.length === 0) {
+        trackListContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center;'>Плейлист пуст. Добавьте музыку во вкладке Импорт.</p>";
+        return;
+      }
+
+      playlistQueue.forEach((track, index) => {
+        const item = document.createElement('div');
+        item.className = `track-item ${track.id === currentPlayingId ? 'playing' : ''}`;
+        
+        // Инфо часть
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'track-info';
+        infoDiv.innerHTML = `
+          <div class="track-name">${index + 1}. ${escapeHTML(track.name)}</div>
+          <div class="track-type">${track.mediaType === 'video' ? '📺 Видео' : '🎵 Аудио'}</div>
+        `;
+        infoDiv.onclick = () => playTrack(track);
+
+        // Кнопки управления (Вверх, Вниз, Удалить)
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'track-actions';
+
+        const upBtn = document.createElement('button');
+        upBtn.className = 'action-btn';
+        upBtn.innerHTML = '↑';
+        upBtn.onclick = (e) => { e.stopPropagation(); moveTrack(index, -1); };
+        if (index === 0) upBtn.style.opacity = '0.3';
+
+        const downBtn = document.createElement('button');
+        downBtn.className = 'action-btn';
+        downBtn.innerHTML = '↓';
+        downBtn.onclick = (e) => { e.stopPropagation(); moveTrack(index, 1); };
+        if (index === playlistQueue.length - 1) downBtn.style.opacity = '0.3';
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'action-btn delete';
+        delBtn.innerHTML = '✕';
+        delBtn.onclick = (e) => { e.stopPropagation(); removeTrack(track.id); };
+
+        actionsDiv.appendChild(upBtn);
+        actionsDiv.appendChild(downBtn);
+        actionsDiv.appendChild(delBtn);
+
+        item.appendChild(infoDiv);
+        item.appendChild(actionsDiv);
+        trackListContainer.appendChild(item);
+      });
+    }
+
+    async function moveTrack(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= playlistQueue.length) return;
+
+      // Меняем местами orderIndex
+      const tempOrder = playlistQueue[index].orderIndex;
+      playlistQueue[index].orderIndex = playlistQueue[targetIndex].orderIndex;
+      playlistQueue[targetIndex].orderIndex = tempOrder;
+
+      try {
+        await saveTrackToDB(playlistQueue[index]);
+        await saveTrackToDB(playlistQueue[targetIndex]);
+        await refreshPlaylist();
+      } catch (e) {
+        showDebugAlert("Ошибка при перемещении трека.");
+      }
+    }
+
+    async function removeTrack(id) {
+      try {
+        if (currentPlayingId === id) {
+          mediaPlayer.pause();
+          mediaPlayer.src = "";
+          currentPlayingId = null;
+          nowPlayingText.textContent = "Ничего не играет";
+          videoWrapper.style.display = 'none';
+          audioWrapper.style.display = 'none';
+        }
+        await deleteTrackFromDB(id);
+        await refreshPlaylist();
+      } catch(e) {
+        showDebugAlert("Не удалось удалить трек.");
+      }
+    }
+
+    // Воспроизведение
+    function playTrack(track) {
+      if (!track || !track.buffer) return;
+
+      currentPlayingId = track.id;
+      nowPlayingText.textContent = track.name;
+
+      // Очистка старого URL памяти
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+
+      // Восстанавливаем Blob из ArrayBuffer
+      const blob = new Blob([track.buffer], { type: track.mimeType });
+      currentObjectUrl = URL.createObjectURL(blob);
+      
+      mediaPlayer.src = currentObjectUrl;
+
+      if (track.mediaType === 'video') {
+        videoWrapper.style.display = 'block';
+        audioWrapper.style.display = 'none';
+      } else {
+        videoWrapper.style.display = 'none';
+        audioWrapper.style.display = 'block';
+        // Перемещаем контролы видео внутрь обертки аудио для визуального удобства
+        audioWrapper.appendChild(mediaPlayer); 
+        // Но чтобы видео не показывало черный квадрат, задаем ему высоту контролов
+        mediaPlayer.style.maxHeight = "50px"; 
+      }
+
+      if (track.mediaType === 'video') {
+         videoWrapper.appendChild(mediaPlayer);
+         mediaPlayer.style.maxHeight = "250px";
+      }
+
+      mediaPlayer.play().catch(e => {
+        showDebugAlert("Автовоспроизведение заблокировано браузером. Нажмите Play вручную.");
+      });
+
+      renderPlaylist(); // обновляем выделение
+    }
+
+    // Автоматический переход к следующему
+    mediaPlayer.addEventListener('ended', () => {
+      const currentIndex = playlistQueue.findIndex(t => t.id === currentPlayingId);
+      if (currentIndex !== -1 && currentIndex < playlistQueue.length - 1) {
+        playTrack(playlistQueue[currentIndex + 1]);
+      } else if (playlistQueue.length > 0) {
+        // Зацикливание плейлиста
+        playTrack(playlistQueue[0]);
+      }
+    });
+
+    // Утилита очистки строк
+    function escapeHTML(str) {
+      const p = document.createElement("p");
+      p.appendChild(document.createTextNode(str));
+      return p.innerHTML;
+    }
+
+    // --- 6. Запуск ---
+    window.onload = async () => {
+      try {
+        await initDB();
+        await refreshPlaylist();
+      } catch (e) {
+        showDebugAlert("Критическая ошибка инициализации приложения.");
+      }
+    };
+  </script>
+</body>
+</html>
